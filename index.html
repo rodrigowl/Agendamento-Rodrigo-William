@@ -60,11 +60,25 @@
         </div>
     </div>
 
-    <!-- SISTEMA PRINCIPAL (LAYOUT EM 3 COLUNAS) -->
-    <div id="main-system" class="hidden flex-1 flex flex-col md:flex-row h-screen overflow-hidden">
+     <div id="main-system" class="hidden flex-1 flex flex-col md:flex-row h-screen overflow-hidden">
+        
+        <!-- NOVO: BARRA SUPERIOR PARA CELULAR -->
+        <div class="md:hidden bg-slate-900 border-b border-slate-800 p-4 flex justify-between items-center z-40 shrink-0 select-none">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-car-rear text-blue-500 text-lg"></i>
+                <span class="text-xs font-bold text-slate-200 uppercase tracking-wider">Rodrigo William</span>
+            </div>
+            <button onclick="toggleMobileSidebar()" class="text-slate-400 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-slate-800">
+                <i class="fa-solid fa-bars text-lg"></i>
+            </button>
+        </div>
+        
+        <!-- NOVO: FUNDO ESCURO AO ABRIR O MENU NO CELULAR -->
+        <div id="mobile-sidebar-overlay" onclick="closeMobileSidebar()" class="hidden md:hidden fixed inset-0 bg-black/60 z-40"></div>
         
         <!-- COLUNA 1: SIDEBAR LATERAL -->
-        <aside class="w-full md:w-64 bg-slate-900 border-r border-slate-800 flex flex-col justify-between shrink-0">
+        !-- Sidebar lateral responsiva (Menu Gaveta) -->
+        <aside id="sidebar-aside" class="fixed md:static inset-y-0 left-0 w-64 md:w-64 bg-slate-900 border-r border-slate-800 flex flex-col justify-between shrink-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out z-50">
             <div>
                 <!-- Logo -->
                 <div class="p-5 border-b border-slate-800 flex flex-col items-center">
@@ -1612,6 +1626,7 @@
 
         // NAVEGAÇÃO DE ABAS
         function switchTab(tabName) {
+		closeMobileSidebar(); // NOVO: Fecha automaticamente o menu lateral no celular ao trocar de aba
             currentTab = tabName;
             
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
@@ -3082,10 +3097,39 @@
             if (parts.length !== 3) return dateString;
             return `${parts[2]}/${parts[1]}/${parts[0]}`;
         }
+		
+		// ABRE / FECHA MENU LATERAL NO CELULAR
+        function toggleMobileSidebar() {
+            const sidebar = document.getElementById('sidebar-aside');
+            const overlay = document.getElementById('mobile-sidebar-overlay');
+            if (sidebar && overlay) {
+                const isOpen = sidebar.classList.contains('translate-x-0');
+                if (isOpen) {
+                    closeMobileSidebar();
+                } else {
+                    sidebar.classList.remove('-translate-x-full');
+                    sidebar.classList.add('translate-x-0');
+                    overlay.classList.remove('hidden');
+                }
+            }
+        }
+
+        // FECHA O MENU LATERAL NO CELULAR
+        function closeMobileSidebar() {
+            const sidebar = document.getElementById('sidebar-aside');
+            const overlay = document.getElementById('mobile-sidebar-overlay');
+            if (sidebar && overlay) {
+                sidebar.classList.remove('translate-x-0');
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+            }
+        }
 
         // ==========================================
         // VÍNCULO GLOBAL DAS FUNÇÕES (Para Modules ES6)
         // ==========================================
+		window.toggleMobileSidebar = toggleMobileSidebar;
+        window.closeMobileSidebar = closeMobileSidebar;
         window.switchTab = switchTab;
         window.openModal = openModal;
         window.closeModal = closeModal;
