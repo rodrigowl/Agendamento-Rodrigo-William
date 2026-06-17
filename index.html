@@ -753,7 +753,7 @@
 
 		
 		
-		// GERAR RELATÓRIO GERENCIAL FINANCEIRO NATIVO (FIEL AO PERÍODO FILTRADO)
+		// GERAR RELATÓRIO GERENCIAL FINANCEIRO NATIVO (ORDENADO CRONOLOGICAMENTE POR DATA)
         async function generateFinancialPDF() {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({
@@ -772,7 +772,7 @@
             doc.rect(0, 0, pageWidth, 3, 'F');
             currentY += 5;
 
-            // Logotipo ou ícone comercial
+            // Logotipo ou monograma de segurança (Evita caracteres estranhos)
             let logoHTML = '';
             let hasLogo = false;
             if (savedLogo && savedLogo.startsWith("data:image")) {
@@ -784,27 +784,30 @@
                     doc.addImage(savedLogo, format, startX, currentY, 35, 15);
                     hasLogo = true;
                 } catch (e) {
-                    console.warn("Logo incompatível para PDF.");
+                    console.warn("Logo com erro.");
                 }
             }
 
             if (!hasLogo) {
+                // Desenha um monograma sofisticado com as iniciais "RW" para evitar emoji de carro quebrado
+                doc.setFillColor(30, 64, 175); // Azul
+                doc.circle(startX + 6, currentY + 6, 6, 'F');
                 doc.setFont("helvetica", "bold");
-                doc.setFontSize(22);
-                doc.setTextColor(245, 158, 11); 
-                doc.text("🚗", startX, currentY + 11);
+                doc.setFontSize(8);
+                doc.setTextColor(255, 255, 255); // Branco
+                doc.text("RW", startX + 6, currentY + 9.5, { align: "center" });
             }
 
             // Título principal
             doc.setFont("helvetica", "bold");
             doc.setFontSize(16);
             doc.setTextColor(15, 23, 42);
-            doc.text("RODRIGO WILLIAM", startX + (hasLogo ? 40 : 12), currentY + 6);
+            doc.text("RODRIGO WILLIAM", startX + (hasLogo ? 40 : 16), currentY + 6);
 
             doc.setFont("helvetica", "bold");
             doc.setFontSize(8.5);
             doc.setTextColor(30, 64, 175); 
-            doc.text("ESPAÇO AUTOMOTIVO", startX + (hasLogo ? 40 : 12), currentY + 11);
+            doc.text("ESPAÇO AUTOMOTIVO", startX + (hasLogo ? 40 : 16), currentY + 11);
 
             // Título do documento
             doc.setFont("helvetica", "bold");
@@ -838,17 +841,17 @@
                 activeExps = activeExps.filter(exp => exp.date >= selectedFilterStartDate && exp.date <= selectedFilterEndDate);
             }
 
-            // --- NOVO: ORDENAÇÃO POR DATAS NO PDF (Do mais antigo ao mais novo) ---
+            // --- ORDENAÇÃO FORÇADA POR DATA CRONOLÓGICA (Do mais antigo ao mais novo) ---
             activeApts.sort((a, b) => {
-                const dtA = (a.date || "") + " " + (a.time || "00:00");
-                const dtB = (b.date || "") + " " + (b.time || "00:00");
-                return dtA.localeCompare(dtB);
+                const dateA = a.date || "";
+                const dateB = b.date || "";
+                if (dateA !== dateB) return dateA.localeCompare(dateB);
+                return (a.time || "").localeCompare(b.time || ""); // Desempata pelo horário
             });
 
             activeExps.sort((a, b) => {
                 return (a.date || "").localeCompare(b.date || "");
             });
-            // ---------------------------------------------------------------------
 
             // Realiza os cálculos do período (Desconsiderando os Cancelados)
             const totalIncome = activeApts
@@ -858,9 +861,7 @@
             const totalExpense = activeExps.reduce((sum, exp) => sum + parseFloat(exp.amount || 0), 0);
             const netProfit = totalIncome - totalExpense;
 
-            // ------------------------------------------
-            // DESENHA QUADROS FINANCEIROS (MOCKUP CORES)
-            // ------------------------------------------
+            // Desenha os quadros informativos coloridos do topo
             const boxWidth = contentWidth / 3 - 3;
             
             // Quadro 1: Faturamento (Entradas) - Verde
@@ -885,7 +886,7 @@
             doc.setFontSize(10.5);
             doc.text(`R$ ${totalExpense.toFixed(2)}`, startX + boxWidth + 7, currentY + 12);
 
-            // Quadro 3: Lucro Líquido - Azul / Vermelho (se prejuízo)
+            // Quadro 3: Lucro Líquido
             const isProfitPositive = netProfit >= 0;
             doc.setFillColor(isProfitPositive ? 239 : 254, isProfitPositive ? 246 : 242, isProfitPositive ? 255 : 242); 
             doc.setDrawColor(isProfitPositive ? 191 : 254, isProfitPositive ? 219 : 226, isProfitPositive ? 254 : 226);
