@@ -838,6 +838,18 @@
                 activeExps = activeExps.filter(exp => exp.date >= selectedFilterStartDate && exp.date <= selectedFilterEndDate);
             }
 
+            // --- NOVO: ORDENAÇÃO POR DATAS NO PDF (Do mais antigo ao mais novo) ---
+            activeApts.sort((a, b) => {
+                const dtA = (a.date || "") + " " + (a.time || "00:00");
+                const dtB = (b.date || "") + " " + (b.time || "00:00");
+                return dtA.localeCompare(dtB);
+            });
+
+            activeExps.sort((a, b) => {
+                return (a.date || "").localeCompare(b.date || "");
+            });
+            // ---------------------------------------------------------------------
+
             // Realiza os cálculos do período (Desconsiderando os Cancelados)
             const totalIncome = activeApts
                 .filter(apt => apt.status !== "Cancelado")
