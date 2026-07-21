@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -1222,6 +1222,976 @@
             });
 
             const sortedDates = Object.keys(groups).sort();
+
+            if (sortedDates.length === 0) {
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(9);
+                doc.setTextColor(148, 163, 184);
+                doc.text("Nenhum agendamento marcado no período selecionado.", startX, currentY);
+                currentY += 10;
+            } else {
+                sortedDates.forEach(date => {
+                    const dateApts = groups[date];
+                    const dayOfWeekName = getDayOfWeekName(date);
+                    
+                    // Prevenção de quebra de página caso a lista de dias exceda a folha
+                    if (currentY > 260) {
+                        doc.addPage();
+                        currentY = 20;
+                        doc.setFillColor(30, 64, 175);
+                        doc.rect(0, 0, pageWidth, 3, 'F');
+                    }
+
+                    // CABEÇALHO DO DIA - Desenha uma pequena barrinha azul em vez do emoji quebrado
+                    doc.setFillColor(30, 64, 175); // Azul Real
+                    doc.rect(startX, currentY - 3, 1.2, 4.2, 'F');
+
+                    doc.setFont("helvetica", "bold");
+                    doc.setFontSize(8.5);
+                    doc.setTextColor(30, 64, 175); // Blue
+                    doc.text(`${dayOfWeekName.toUpperCase()} - ${formatDate(date)}`, startX + 3, currentY);
+                    
+                    currentY += 1.5;
+                    doc.setDrawColor(30, 64, 175);
+                    doc.setLineWidth(0.4);
+                    doc.line(startX, currentY, pageWidth - startX, currentY);
+                    currentY += 5;
+
+                    dateApts.forEach(apt => {
+                        if (currentY > 275) {
+                            doc.addPage();
+                            currentY = 20;
+                            doc.setFillColor(30, 64, 175);
+                            doc.rect(0, 0, pageWidth, 3, 'F');
+                            
+                            // Re-desenha a barrinha e o dia no topo da nova folha
+                            doc.setFillColor(30, 64, 175);
+                            doc.rect(startX, currentY - 3, 1.2, 4.2, 'F');
+                            doc.setFont("helvetica", "bold");
+                            doc.setFontSize(8.5);
+                            doc.setTextColor(30, 64, 175);
+                            doc.text(`${dayOfWeekName.toUpperCase()} - ${formatDate(date)} (CONT.)`, startX + 3, currentY);
+                            currentY += 5;
+                        }
+
+                        // Hora do agendamento
+                        doc.setFont("helvetica", "bold");
+                        doc.setFontSize(8);
+                        doc.setTextColor(217, 119, 6); // amber-600
+                        doc.text(`${apt.time || ""}h`, startX, currentY);
+
+                        // Nome do cliente e carro
+                        doc.setFont("helvetica", "bold");
+                        doc.setTextColor(15, 23, 42); // slate-900
+                        doc.text(apt.client || "", startX + 14, currentY);
+                        
+                        if (apt.car) {
+                            doc.setFont("helvetica", "normal");
+                            doc.setFontSize(7.5);
+                            doc.setTextColor(100, 116, 139); // slate-500
+                            doc.text(`(${apt.car})`, startX + 15 + doc.getTextWidth(apt.client || ""), currentY);
+                        }
+
+                        // Serviços do atendimento (Limitado a 35 caracteres para evitar colisões/sobreposições)
+                        doc.setFont("helvetica", "normal");
+                        doc.setFontSize(8);
+                        doc.setTextColor(71, 85, 105); // slate-600
+                        const sNames = Array.isArray(apt.serviceNames) ? apt.serviceNames.join(" + ") : (apt.serviceName || "");
+                        const clippedServices = sNames.length > 35 ? sNames.substring(0, 32) + "..." : sNames;
+                        doc.text(clippedServices, startX + 72, currentY);
+
+                        // Status do agendamento
+                        doc.setFont("helvetica", "bold");
+                        doc.setFontSize(7.5);
+                        doc.setTextColor(100, 116, 139); // default
+                        if (apt.status === "Confirmado") doc.setTextColor(5, 150, 105);
+                        if (apt.status === "Concluído") doc.setTextColor(30, 64, 175);
+                        if (apt.status === "Cancelado") doc.setTextColor(185, 28, 28);
+                        doc.text(apt.status || "Confirmado", startX + 130, currentY);
+
+                        // Preço líquido tratado com Modo Privacidade
+                        doc.setFont("helvetica", "bold");
+                        doc.setFontSize(8);
+                        if (apt.status === "Cancelado") {
+                            doc.setTextColor(185, 28, 28);
+                            doc.text("Cancelado", pageWidth - startX, currentY, { align: 'right' });
+                        } else {
+                            doc.setTextColor(15, 23, 42);
+                            const displayedPrice = financeValuesHidden ? "R$ ••••••" : `R$ ${parseFloat(apt.price || 0).toFixed(2)}`;
+                            doc.text(displayedPrice, pageWidth - startX, currentY, { align: 'right' });
+                        }
+
+                        currentY += 5;
+                    });
+
+                    currentY += 4; // Espaçamento entre os grupos de dias
+                });
+            }
+
+            // Rodapé final de fechamento do relatório
+            if (currentY > 265) {
+                doc.addPage();
+                currentY = 20;
+                doc.setFillColor(30, 64, 175);
+                doc.rect(0, 0, pageWidth, 3, 'F');
+            }
+
+            currentY += 5;
+            doc.setDrawColor(241, 245, 249);
+            doc.setLineWidth(0.4);
+            doc.line(startX, currentY, pageWidth - startX, currentY);
+
+            currentY += 5;
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(9);
+            doc.setTextColor(51, 65, 85);
+            doc.text("Relatório de Controle Operacional de Atendimentos", pageWidth / 2, currentY, { align: 'center' });
+
+            currentY += 4.5;
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(7.5);
+            doc.setTextColor(148, 163, 184);
+            doc.text("Rodrigo William Espaço Automotivo - Gestão e Controle Interno", pageWidth / 2, currentY, { align: 'center' });
+
+            doc.save(`Relatorio_Agendamentos_${dateRangeText.replace(/\s+/g, '_')}.pdf`);
+        }
+
+        // CONFIGURAÇÕES DO SEU FIREBASE
+        const firebaseConfig = {
+          apiKey: "AIzaSyD20_8EUnPrue2KvwEhr7JVXo1p-vlyZa4",
+          authDomain: "agendamentorwea.firebaseapp.com",
+          projectId: "agendamentorwea",
+          storageBucket: "agendamentorwea.firebasestorage.app",
+          messagingSenderId: "372549194048",
+          appId: "1:372549194048:web:63d631eef87252dfc66aa5",
+          measurementId: "G-Y4TBVJFNM0"
+        };
+
+        // Inicializar Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        // Estado da aplicação
+        let services = [];
+        let appointments = [];
+        let expenses = [];
+        let customers = []; 
+        let savedLogo = "";
+        
+        let currentTab = "agenda";
+        let selectedFilterStartDate = ""; 
+        let selectedFilterEndDate = ""; 
+        let searchActiveQuery = ""; // Query de busca ativa no topo
+		let calendarYear = new Date().getFullYear(); // Adicionado para navegação
+        let calendarMonth = new Date().getMonth();   // Adicionado para navegação
+        let editingAppointmentId = null; 
+        let editingCustomerId = null;
+        let editingServiceId = null;
+        let selectedServicesInModal = [];
+        let financeValuesHidden = false;
+
+        const LOGIN_USER = "agendamento";
+        const LOGIN_PASS = "silvano 2445";
+
+        // ==========================================
+        // SINCRO EM TEMPO REAL (FIRESTORE SNAPSHOTS)
+        // ==========================================
+        
+        // Sincronizar Serviços
+        onSnapshot(collection(db, "services"), (snapshot) => {
+            services = [];
+            snapshot.forEach(docSnap => {
+                services.push({ id: docSnap.id, ...docSnap.data() });
+            });
+            if (currentTab === 'servicos') renderServices();
+            populateServiceDropdown();
+            updateDashboard();
+        });
+
+        // Sincronizar Clientes
+        onSnapshot(collection(db, "customers"), (snapshot) => {
+            customers = [];
+            snapshot.forEach(docSnap => {
+                customers.push({ id: docSnap.id, ...docSnap.data() });
+            });
+            if (currentTab === 'clientes') renderCustomers();
+            populateClientDropdown();
+        });
+
+        // Sincronizar Agendamentos
+        onSnapshot(collection(db, "appointments"), (snapshot) => {
+            appointments = [];
+            snapshot.forEach(docSnap => {
+                appointments.push({ id: docSnap.id, ...docSnap.data() });
+            });
+            if (currentTab === 'agenda') renderAppointments();
+            updateDashboard();
+        });
+
+        // Sincronizar Despesas
+        onSnapshot(collection(db, "expenses"), (snapshot) => {
+            expenses = [];
+            snapshot.forEach(docSnap => {
+                expenses.push({ id: docSnap.id, ...docSnap.data() });
+            });
+            if (currentTab === 'financeiro') renderFinance();
+            updateDashboard();
+        });
+
+        // Sincronizar Logo
+        onSnapshot(doc(db, "config", "logo"), (docSnap) => {
+            if (docSnap.exists()) {
+                savedLogo = docSnap.data().value || "";
+            } else {
+                savedLogo = "";
+            }
+            renderLogo();
+        });
+
+        // Controle de Sessão Criptografado pelo Firebase
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                showMainSystem();
+            } else {
+                showLoginScreen();
+            }
+        });
+
+        // CONTROLE DE AUTENTICAÇÃO
+        function showLoginScreen() {
+            document.getElementById('login-screen').classList.remove('hidden');
+            document.getElementById('main-system').classList.add('hidden');
+        }
+
+        function showMainSystem() {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('main-system').classList.remove('hidden');
+
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            const todayStr = `${yyyy}-${mm}-${dd}`;
+            
+            selectedFilterStartDate = todayStr;
+            selectedFilterEndDate = todayStr;
+
+            // Sincroniza inputs da Agenda
+            const startInput = document.getElementById('agenda-date-start');
+            const endInput = document.getElementById('agenda-date-end');
+            if (startInput) startInput.value = todayStr;
+            if (endInput) endInput.value = todayStr;
+
+            // Sincroniza inputs do Financeiro
+            const startFinance = document.getElementById('finance-date-start');
+            const endFinance = document.getElementById('finance-date-end');
+            if (startFinance) startFinance.value = todayStr;
+            if (endFinance) endFinance.value = todayStr;
+
+            switchTab(currentTab);
+            updateDashboard();
+            renderLogo();
+            renderMiniCalendar(); 
+        }
+		
+		// ATUALIZA OS FILTROS QUANDO ALTERADO NA TELA DE FINANÇAS (SINCRONIZADO)
+        function changeFinanceFilterRange() {
+            const startInput = document.getElementById('finance-date-start');
+            const endInput = document.getElementById('finance-date-end');
+            
+            selectedFilterStartDate = startInput ? startInput.value : "";
+            selectedFilterEndDate = endInput ? endInput.value : "";
+            
+            // Espelha as datas selecionadas para os campos da aba Agenda
+            const startAgenda = document.getElementById('agenda-date-start');
+            const endAgenda = document.getElementById('agenda-date-end');
+            if (startAgenda) startAgenda.value = selectedFilterStartDate;
+            if (endAgenda) endAgenda.value = selectedFilterEndDate;
+            
+            const btnClear = document.getElementById('btn-clear-finance-filter');
+            const btnClearAgenda = document.getElementById('btn-clear-filter');
+            if (selectedFilterStartDate || selectedFilterEndDate) {
+                if (btnClear) btnClear.classList.remove('hidden');
+                if (btnClearAgenda) btnClearAgenda.classList.remove('hidden');
+            } else {
+                if (btnClear) btnClear.classList.add('hidden');
+                if (btnClearAgenda) btnClearAgenda.classList.add('hidden');
+            }
+            
+            renderFinance();
+            renderAppointments();
+            updateDashboard();
+        }
+
+        // LIMPA OS FILTROS DAS DUAS TELAS SIMULTANEAMENTE
+        function clearFinanceDateFilter() {
+            selectedFilterStartDate = "";
+            selectedFilterEndDate = "";
+            
+            const startFinance = document.getElementById('finance-date-start');
+            const endFinance = document.getElementById('finance-date-end');
+            if (startFinance) startFinance.value = "";
+            if (endFinance) endFinance.value = "";
+            
+            const startAgenda = document.getElementById('agenda-date-start');
+            const endAgenda = document.getElementById('agenda-date-end');
+            if (startAgenda) startAgenda.value = "";
+            if (endAgenda) endAgenda.value = "";
+            
+            const btnClear = document.getElementById('btn-clear-finance-filter');
+            const btnClearAgenda = document.getElementById('btn-clear-filter');
+            if (btnClear) btnClear.classList.add('hidden');
+            if (btnClearAgenda) btnClearAgenda.classList.add('hidden');
+            
+            renderFinance();
+            renderAppointments();
+            updateDashboard();
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const userIn = document.getElementById('username').value.trim();
+            const passIn = document.getElementById('password').value.trim();
+            const errDiv = document.getElementById('login-error');
+
+            let email = userIn;
+            if (!email.includes('@')) {
+                email = userIn + "@seu-sistema.com";
+            }
+
+            try {
+                await signInWithEmailAndPassword(auth, email, passIn);
+                if (errDiv) errDiv.classList.add('hidden');
+                document.getElementById('login-form').reset();
+            } catch (error) {
+                console.error("Falha de autenticação:", error);
+                if (errDiv) {
+                    errDiv.classList.remove('hidden');
+                    errDiv.textContent = "Usuário ou senha incorretos.";
+                }
+            }
+        }
+
+        async function handleLogout() {
+            try {
+                await signOut(auth);
+            } catch (error) {
+                console.error("Erro ao sair:", error);
+            }
+        }
+
+        // ATALHOS RÁPIDOS DE FILTRAGEM (HOJE, SEMANA, MÊS)
+        function setQuickPeriod(type) {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            const todayStr = `${yyyy}-${mm}-${dd}`;
+
+            let startStr = todayStr;
+            let endStr = todayStr;
+
+            if (type === 'week') {
+                const nextWeek = new Date(today);
+                nextWeek.setDate(today.getDate() + 7);
+                const nextY = nextWeek.getFullYear();
+                const nextM = String(nextWeek.getMonth() + 1).padStart(2, '0');
+                const nextD = String(nextWeek.getDate()).padStart(2, '0');
+                endStr = `${nextY}-${nextM}-${nextD}`;
+            } else if (type === 'month') {
+                const nextMonth = new Date(today);
+                nextMonth.setDate(today.getDate() + 30);
+                const nextY = nextMonth.getFullYear();
+                const nextM = String(nextWeek.getMonth() + 1).padStart(2, '0');
+                const nextD = String(nextWeek.getDate()).padStart(2, '0');
+                endStr = `${nextY}-${nextM}-${nextD}`;
+            }
+
+            selectedFilterStartDate = startStr;
+            selectedFilterEndDate = endStr;
+
+            const startInput = document.getElementById('agenda-date-start');
+            const endInput = document.getElementById('agenda-date-end');
+            if (startInput) startInput.value = startStr;
+            if (endInput) endInput.value = endStr;
+
+            changeFilterRange();
+        }
+
+        // FILTRO POR PERÍODO (DE / ATÉ)
+        function changeFilterRange() {
+            const startInput = document.getElementById('agenda-date-start');
+            const endInput = document.getElementById('agenda-date-end');
+            
+            selectedFilterStartDate = startInput ? startInput.value : "";
+            selectedFilterEndDate = endInput ? endInput.value : "";
+            
+            const btnClear = document.getElementById('btn-clear-filter');
+            if (selectedFilterStartDate || selectedFilterEndDate) {
+                if (btnClear) btnClear.classList.remove('hidden');
+            } else {
+                if (btnClear) btnClear.classList.add('hidden');
+            }
+            
+            renderAppointments();
+            updateDashboard(); 
+        }
+
+        function clearDateFilter() {
+            selectedFilterStartDate = "";
+            selectedFilterEndDate = "";
+            
+            const startInput = document.getElementById('agenda-date-start');
+            const endInput = document.getElementById('agenda-date-end');
+            if (startInput) startInput.value = "";
+            if (endInput) endInput.value = "";
+            
+            const btnClear = document.getElementById('btn-clear-filter');
+            if (btnClear) btnClear.classList.add('hidden');
+            
+            renderAppointments();
+            updateDashboard();
+        }
+
+        // BARRA DE PESQUISA ATIVA DO TOPO
+        function handleSearch(query) {
+            searchActiveQuery = query.trim().toUpperCase();
+            renderAppointments();
+        }
+
+        // NAVEGAÇÃO DE ABAS
+        function switchTab(tabName) {
+		closeMobileSidebar(); // NOVO: Fecha automaticamente o menu lateral no celular ao trocar de aba
+            currentTab = tabName;
+            
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            const activeSection = document.getElementById(`tab-${tabName}`);
+            if (activeSection) activeSection.classList.remove('hidden');
+
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                if (btn.getAttribute('data-tab') === tabName) {
+                    btn.classList.add('bg-blue-500/10', 'text-blue-500', 'border-l-4', 'border-blue-500', 'pl-3');
+                    btn.classList.remove('text-slate-300');
+                } else {
+                    btn.classList.remove('bg-blue-500/10', 'text-blue-500', 'border-l-4', 'border-blue-500', 'pl-3');
+                    btn.classList.add('text-slate-300');
+                }
+            });
+
+            if (tabName === 'agenda') renderAppointments();
+            if (tabName === 'clientes') renderCustomers();
+            if (tabName === 'servicos') renderServices();
+            if (tabName === 'financeiro') renderFinance();
+        }
+
+        // CONTROLE DOS MODAIS
+        function openModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) modal.classList.remove('hidden');
+            
+            if (modalId === 'appointment-modal') {
+                document.getElementById('appointment-modal-title').textContent = "Criar Novo Agendamento";
+                document.getElementById('appointment-form').reset();
+                document.getElementById('apt-car').value = ""; // Limpa campo carro
+                document.getElementById('apt-observation').value = ""; // Limpa campo observação
+                
+                const todayStr = new Date().toISOString().split('T')[0];
+                document.getElementById('apt-date-start').value = todayStr;
+                document.getElementById('apt-date-end').value = todayStr;
+                
+                selectedServicesInModal = [];
+                editingAppointmentId = null; 
+                
+                populateClientDropdown();
+                populateServiceDropdown();
+                renderSelectedServicesInModal();
+            } else if (modalId === 'customer-modal') {
+                document.getElementById('customer-modal-title').textContent = "Cadastrar Novo Cliente";
+                document.getElementById('customer-form').reset();
+                editingCustomerId = null; 
+            } else if (modalId === 'service-modal') {
+                document.getElementById('service-modal-title').textContent = "Adicionar Novo Serviço";
+                document.getElementById('service-form').reset();
+                editingServiceId = null; 
+            }
+        }
+
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) modal.classList.add('hidden');
+        }
+
+        // SISTEMA DE LOGO
+        function uploadLogo(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = async function(event) {
+                    const base64Img = event.target.result;
+                    try {
+                        await setDoc(doc(db, "config", "logo"), { value: base64Img });
+                    } catch (err) {
+                        alert("Erro ao enviar imagem.");
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        async function saveLogoUrl() {
+            const urlInput = document.getElementById('logo-url-input');
+            const urlValue = urlInput ? urlInput.value.trim() : "";
+            if (urlValue) {
+                try {
+                    await setDoc(doc(db, "config", "logo"), { value: urlValue });
+                    if (urlInput) urlInput.value = "";
+                } catch (err) {
+                    alert("Erro ao salvar link da logo.");
+                }
+            }
+        }
+
+        async function resetLogo() {
+            if (confirm("Remover a logo da nuvem?")) {
+                try {
+                    await setDoc(doc(db, "config", "logo"), { value: "" });
+                } catch (err) {
+                    console.error(err);
+                }
+            }
+        }
+
+        function renderLogo() {
+            const placeholder = document.getElementById('logo-placeholder-text');
+            const img = document.getElementById('logo-preview-img');
+            if (!placeholder || !img) return;
+
+            if (savedLogo) {
+                placeholder.classList.add('hidden');
+                img.src = savedLogo;
+                img.classList.remove('hidden');
+            } else {
+                placeholder.classList.remove('hidden');
+                placeholder.textContent = "Nenhuma logo enviada";
+                img.src = "";
+                img.classList.add('hidden');
+            }
+        }
+
+        // ==========================================
+        // CADASTRO DE CLIENTES
+        // ==========================================
+        function renderCustomers() {
+            const tbody = document.getElementById('customers-tbody');
+            if (!tbody) return;
+            tbody.innerHTML = "";
+
+            customers.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+
+            customers.forEach(c => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-900/30 transition-colors">
+                        <td class="p-4 font-bold text-slate-100">${c.name || ""}</td>
+                        <td class="p-4 text-slate-300">${c.phone || "Não informado"}</td>
+                        <td class="p-4 text-center">
+                            <div class="flex items-center justify-center gap-2">
+                                <button onclick="viewCustomerHistory('${c.name}', '${c.phone}')" class="bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors">
+                                    <i class="fa-solid fa-clock-rotate-left"></i> Histórico
+                                </button>
+                                <button onclick="editCustomer('${c.id}')" class="bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/30 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors">
+                                    <i class="fa-solid fa-pen-to-square"></i> Alterar
+                                </button>
+                                <button onclick="deleteCustomer('${c.id}')" class="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors">
+                                    <i class="fa-solid fa-trash-can"></i> Excluir
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            if (customers.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="3" class="p-8 text-center text-slate-500 font-medium">Nenhum cliente cadastrado.</td>
+                    </tr>
+                `;
+            }
+        }
+
+        async function addCustomer(e) {
+            e.preventDefault();
+            const nameEl = document.getElementById('cust-name');
+            const phoneEl = document.getElementById('cust-phone');
+            if (!nameEl || !phoneEl) return;
+
+            const name = nameEl.value.trim();
+            const phone = phoneEl.value.trim();
+
+            try {
+                if (editingCustomerId) {
+                    await updateDoc(doc(db, "customers", editingCustomerId), { name, phone });
+                    alert("Cliente updated com sucesso!");
+                } else {
+                    const docRef = await addDoc(collection(db, "customers"), { name, phone });
+                    alert("Cliente cadastrado com sucesso!");
+                    
+                    const appointmentModal = document.getElementById('appointment-modal');
+                    if (appointmentModal && !appointmentModal.classList.contains('hidden')) {
+                        window.autoSelectCustomerId = docRef.id;
+                    }
+                }
+                const form = document.getElementById('customer-form');
+                if (form) form.reset();
+                closeModal('customer-modal');
+                editingCustomerId = null; 
+                renderCustomers();
+            } catch (err) {
+                alert("Erro ao salvar cliente.");
+                console.error(err);
+            }
+        }
+
+        function editCustomer(id) {
+            const cust = customers.find(c => c.id === id);
+            if (!cust) return;
+
+            openModal('customer-modal');
+
+            editingCustomerId = id;
+            document.getElementById('customer-modal-title').textContent = "Alterar Cliente";
+            document.getElementById('cust-name').value = cust.name || "";
+            document.getElementById('cust-phone').value = cust.phone || "";
+        }
+
+        async function deleteCustomer(id) {
+            if (confirm("Se você excluir este cliente, os agendamentos continuarão salvos. Deseja excluir?")) {
+                try {
+                    await deleteDoc(doc(db, "customers", id));
+                } catch (err) {
+                    alert("Erro ao excluir cliente.");
+                }
+            }
+        }
+
+        function viewCustomerHistory(name, phone) {
+            const tbody = document.getElementById('history-tbody');
+            const modalTitle = document.getElementById('history-modal-title');
+            const modalPhone = document.getElementById('history-modal-phone');
+            const totalSpentEl = document.getElementById('history-total-spent');
+            if (!tbody || !totalSpentEl) return;
+
+            tbody.innerHTML = "";
+            modalTitle.textContent = `Histórico de: ${name}`;
+            modalPhone.textContent = `Contato: ${phone || 'Não informado'}`;
+
+            const clientHistory = appointments.filter(apt => apt.client === name);
+            clientHistory.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+
+            let totalSpent = 0;
+
+            clientHistory.forEach(apt => {
+                totalSpent += parseFloat(apt.price || 0);
+
+                let servicesList = '';
+                if (apt.serviceNames && Array.isArray(apt.serviceNames)) {
+                    servicesList = apt.serviceNames.join(' + ');
+                } else {
+                    servicesList = apt.serviceName || "Serviço";
+                }
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="p-3 font-semibold">${formatDate(apt.date)} às ${apt.time || ""}</td>
+                        <td class="p-3 text-slate-300">${servicesList}</td>
+                        <td class="p-3 text-right font-bold text-emerald-400">R$ ${parseFloat(apt.price || 0).toFixed(2)}</td>
+                    </tr>
+                `;
+            });
+
+            totalSpentEl.textContent = `R$ ${totalSpent.toFixed(2)}`;
+
+            if (clientHistory.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="3" class="p-8 text-center text-slate-500 font-medium">Nenhum serviço registrado para este cliente.</td>
+                    </tr>
+                `;
+            }
+
+            openModal('history-modal');
+        }
+
+        // ==========================================
+        // GERENCIADOR DE SERVIÇOS
+        // ==========================================
+        function renderServices() {
+            const container = document.getElementById('services-grid');
+            if (!container) return;
+            container.innerHTML = "";
+
+            services.forEach(s => {
+                container.innerHTML += `
+                    <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl flex flex-col justify-between hover:border-slate-700 transition-colors">
+                        <div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                                <h4 class="font-bold text-lg text-slate-100">${s.name}</h4>
+                            </div>
+                            <div class="space-y-1.5 mb-6 text-sm">
+                                <p class="text-slate-400">
+                                    <span class="font-semibold text-slate-300">Preço Base:</span> 
+                                    <span class="text-emerald-400 font-bold">R$ ${parseFloat(s.price || 0).toFixed(2)}</span>
+                                </p>
+                                <p class="text-slate-400">
+                                    <span class="font-semibold text-slate-300">Tempo estimado:</span> ${s.duration || 'Não informado'}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex justify-end pt-3 border-t border-slate-800 gap-3">
+                            <button onclick="editService('${s.id}')" class="text-xs text-amber-500 hover:text-amber-400 flex items-center gap-1">
+                                <i class="fa-solid fa-pen-to-square"></i> Alterar
+                            </button>
+                            <button onclick="deleteService('${s.id}')" class="text-xs text-red-400 hover:text-red-300 flex items-center gap-1">
+                                <i class="fa-solid fa-trash-can"></i> Excluir
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            if (services.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full py-8 text-center text-slate-500">
+                        Nenhum serviço cadastrado na nuvem.
+                    </div>
+                `;
+            }
+        }
+
+        async function addService(e) {
+            e.preventDefault();
+            const nameEl = document.getElementById('srv-name');
+            const priceEl = document.getElementById('srv-price');
+            const durationEl = document.getElementById('srv-duration');
+            if (!nameEl || !priceEl) return;
+
+            const name = nameEl.value.trim();
+            const price = parseFloat(priceEl.value || 0);
+            const duration = durationEl ? durationEl.value : "";
+
+            try {
+                if (editingServiceId) {
+                    await updateDoc(doc(db, "services", editingServiceId), { name, price, duration });
+                    alert("Serviço atualizado com sucesso!");
+                } else {
+                    await addDoc(collection(db, "services"), { name, price, duration });
+                    alert("Serviço adicionado com sucesso!");
+                }
+                const form = document.getElementById('service-form');
+                if (form) form.reset();
+                closeModal('service-modal');
+                editingServiceId = null; 
+                renderServices();
+            } catch (err) {
+                alert("Erro ao salvar serviço.");
+            }
+        }
+
+        function editService(id) {
+            const srv = services.find(s => s.id === id);
+            if (!srv) return;
+
+            openModal('service-modal');
+
+            editingServiceId = id;
+            document.getElementById('service-modal-title').textContent = "Alterar Serviço";
+            document.getElementById('srv-name').value = srv.name || "";
+            document.getElementById('srv-price').value = srv.price || "";
+            document.getElementById('srv-duration').value = srv.duration || "";
+        }
+
+        async function deleteService(id) {
+            if (confirm("Deseja realmente excluir este serviço?")) {
+                try {
+                    await deleteDoc(doc(db, "services", id));
+                } catch (err) {
+                    alert("Erro ao excluir.");
+                }
+            }
+        }
+
+        // ==========================================
+        // SISTEMA DE AGENDAMENTOS (MULTISSERVIÇOS)
+        // ==========================================
+        
+        function populateClientDropdown() {
+            const dropdown = document.getElementById('apt-client-id');
+            if (!dropdown) return;
+            
+            const currentValue = dropdown.value;
+            dropdown.innerHTML = '<option value="">Selecione um cliente...</option>';
+            
+            customers.sort((a,b) => (a.name||"").localeCompare(b.name||""));
+            customers.forEach(c => {
+                dropdown.innerHTML += `<option value="${c.id}">${c.name} (${c.phone || 'Sem fone'})</option>`;
+            });
+
+            if (window.autoSelectCustomerId) {
+                dropdown.value = window.autoSelectCustomerId;
+                window.autoSelectCustomerId = null; 
+            } else if (currentValue) {
+                dropdown.value = currentValue; 
+            }
+        }
+
+        function populateServiceDropdown() {
+            const dropdown = document.getElementById('apt-service-select');
+            if (!dropdown) return;
+            dropdown.innerHTML = '<option value="">Escolha um serviço...</option>';
+            
+            services.sort((a,b) => (a.name||"").localeCompare(b.name||""));
+            services.forEach(s => {
+                dropdown.innerHTML += `<option value="${s.id}">${s.name} - R$ ${parseFloat(s.price).toFixed(2)}</option>`;
+            });
+        }
+
+        function addSelectedServiceToList() {
+            const dropdown = document.getElementById('apt-service-select');
+            if (!dropdown) return;
+
+            const selectedId = dropdown.value;
+            if (!selectedId) {
+                alert("Selecione um serviço na lista.");
+                return;
+            }
+
+            const serviceObj = services.find(s => s.id === selectedId);
+            if (!serviceObj) return;
+
+            if (selectedServicesInModal.some(s => s.id === selectedId)) {
+                alert("Este serviço já foi adicionado.");
+                return;
+            }
+
+            selectedServicesInModal.push(serviceObj);
+            dropdown.value = ""; 
+
+            renderSelectedServicesInModal();
+        }
+
+        function renderSelectedServicesInModal() {
+            const container = document.getElementById('selected-services-container');
+            if (!container) return;
+            container.innerHTML = "";
+
+            if (selectedServicesInModal.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-500 text-center p-2">Nenhum serviço adicionado ainda.</p>`;
+                updatePricePreview(0);
+                return;
+            }
+
+            let totalAcumulado = 0;
+
+            selectedServicesInModal.forEach((s, index) => {
+                totalAcumulado += parseFloat(s.price || 0);
+
+                container.innerHTML += `
+                    <div class="flex items-center justify-between bg-slate-900 border border-slate-800 p-2 rounded-md">
+                        <div class="flex flex-col">
+                            <span class="text-xs font-semibold text-slate-200">${s.name}</span>
+                            <span class="text-[10px] text-emerald-400 font-bold">R$ ${parseFloat(s.price).toFixed(2)}</span>
+                        </div>
+                        <button type="button" onclick="removeServiceFromModalList(${index})" class="text-red-400 hover:text-red-300 text-xs p-1">
+                            <i class="fa-solid fa-trash-can"></i> Remover
+                        </button>
+                    </div>
+                `;
+            });
+
+            updatePricePreview(totalAcumulado);
+        }
+
+        window.removeServiceFromModalList = function(index) {
+            selectedServicesInModal.splice(index, 1);
+            renderSelectedServicesInModal();
+        };
+
+        function updatePricePreview(value) {
+            const preview = document.getElementById('apt-price-preview');
+            const discountInput = document.getElementById('apt-discount');
+            const discount = discountInput ? parseFloat(discountInput.value || 0) : 0;
+            
+            const finalValue = Math.max(0, value - discount);
+            if (preview) preview.textContent = `R$ ${finalValue.toFixed(2)}`;
+        }
+
+        function updateAppointmentPriceLabel() {
+            const totalAcumulado = selectedServicesInModal.reduce((sum, s) => sum + parseFloat(s.price || 0), 0);
+            updatePricePreview(totalAcumulado);
+        }
+
+        // RETORNA DIA DA SEMANA
+        function getDayOfWeekName(dateString) {
+            if (!dateString) return "";
+            const [year, month, day] = dateString.split("-");
+            const date = new Date(year, month - 1, day);
+            const days = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"];
+            return days[date.getDay()];
+        }
+
+        // RENDERIZAR TABELA DE AGENDAMENTOS (AGRUPADOS EM CARTÕES DE DIA DO MOCKUP)
+        // RENDERIZAR TABELA DE AGENDAMENTOS (ATUALIZADA COM COMPROVANTE DE CARRO E CLIQUE RÁPIDO)
+        function renderAppointments() {
+            const container = document.getElementById('appointments-grouped-list');
+            const titleTable = document.getElementById('agenda-table-title');
+            if (!container) return;
+            container.innerHTML = "";
+
+            let filteredAppointments = [...appointments];
+
+            // Filtro de Busca Ativa
+            if (searchActiveQuery) {
+                filteredAppointments = filteredAppointments.filter(apt => {
+                    const clientMatch = (apt.client || "").toUpperCase().includes(searchActiveQuery);
+                    const carMatch = (apt.car || "").toUpperCase().includes(searchActiveQuery);
+                    const serviceMatch = (apt.serviceNames || []).some(name => name.toUpperCase().includes(searchActiveQuery));
+                    return clientMatch || carMatch || serviceMatch;
+                });
+            }
+
+            // Filtro dinâmico por período (De / Até)
+            if (selectedFilterStartDate && selectedFilterEndDate) {
+                filteredAppointments = filteredAppointments.filter(apt => {
+                    return apt.date >= selectedFilterStartDate && apt.date <= selectedFilterEndDate;
+                });
+                if (titleTable) titleTable.textContent = `Compromissos de ${formatDate(selectedFilterStartDate)} até ${formatDate(selectedFilterEndDate)}`;
+            } else if (selectedFilterStartDate) {
+                filteredAppointments = filteredAppointments.filter(apt => apt.date >= selectedFilterStartDate);
+                if (titleTable) titleTable.textContent = `Compromissos a partir de ${formatDate(selectedFilterStartDate)}`;
+            } else if (selectedFilterEndDate) {
+                filteredAppointments = filteredAppointments.filter(apt => apt.date <= selectedFilterEndDate);
+                if (titleTable) titleTable.textContent = `Compromissos até ${formatDate(selectedFilterEndDate)}`;
+            } else {
+                if (titleTable) titleTable.textContent = "Todos os Compromissos Agendados";
+            }
+
+            // Ordena os agendamentos por data e por hora
+            filteredAppointments.sort((a, b) => {
+                const dtA = (a.date || "") + " " + (a.time || "");
+                const dtB = (b.date || "") + " " + (b.time || "");
+                return dtA.localeCompare(dtB);
+            });
+
+            // Agrupar agendamentos por data
+            const groups = {};
+            filteredAppointments.forEach(apt => {
+                if (!groups[apt.date]) groups[apt.date] = [];
+                groups[apt.date].push(apt);
+            });
+
+            const sortedDates = Object.keys(groups).sort();
             const months = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
 
             sortedDates.forEach(date => {
@@ -1255,7 +2225,7 @@
                     if (statusStr === "Concluído") statusClass = "bg-blue-500/10 text-blue-400 border-blue-500/20";
                     if (statusStr === "Cancelado") statusClass = "bg-red-500/10 text-red-400 border-red-500/20";
 
-                    // Preço líquido tratado com Modo Privacidade
+                    // Preço tratado com o Modo Privacidade
                     const finalPrice = financeValuesHidden ? "R$ ••••••" : `R$ ${parseFloat(apt.price || 0).toFixed(2)}`;
 
                     // Badge de Carro se cadastrado
@@ -1439,7 +2409,7 @@
             });
 
             if (conflito) {
-                alert(`⚠️ CONFLITO DE HORÁRIO!\n\nEste horário já está ocupado por outro veículo:\n\nCliente: ${conflito.client}\nVeículo: ${conflito.car || "Não informado"}\nInício: ${formatDate(conflito.dateStart || conflito.date)} às ${conflito.timeStart || conflito.time}h\nTérmino: ${conflito.dateEnd ? formatDate(conflito.dateEnd) + ' às ' + conflito.timeEnd + 'h' : 'Não especificado'}`);
+                alert(`⚠️ CONFLITO DE HORÁRIO!\n\nEste horário já está ocupado por outro veículo:\n\nCliente: ${conflito.client}\nVeículo: ${conflito.car || "Não informado"}\nInício: ${formatDate(conflito.dateStart || conflito.date)} às ${conflito.timeStart || ...time}h\nTérmino: ${conflito.dateEnd ? formatDate(conflito.dateEnd) + ' às ' + ...timeEnd + 'h' : 'Não especificado'}`);
                 return;
             }
 
@@ -1759,7 +2729,7 @@
             doc.setFont("helvetica", "normal");
             doc.setFontSize(8);
             doc.setTextColor(148, 163, 184);
-            doc.text("Cuidando do seu veículo com dedicação, respeito e alto padrão de estética.", pageWidth / 2, currentY, { align: 'center' });
+            doc.text("Cuidando do seu veículo com dedicação, respect e alto padrão de estética.", pageWidth / 2, currentY, { align: 'center' });
 
             // CAIXA DE OBSERVAÇÕES NO FINAL DA FOLHA
             currentY += 10; 
@@ -2214,6 +3184,7 @@
             }
         }
 
+        // ATIVA/DESATIVA MODO PRIVACIDADE FINANCEIRA (SINCRONIZADO)
         // ATIVA/DESATIVA MODO PRIVACIDADE FINANCEIRA (SINCRONIZADO)
         function toggleFinancePrivacy() {
             financeValuesHidden = !financeValuesHidden;
