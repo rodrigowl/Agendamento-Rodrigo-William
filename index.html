@@ -444,10 +444,11 @@
                 </section>
 
                 <!-- SEÇÃO 4: CONFIGURAÇÕES -->
+                <!-- SEÇÃO 4: CONFIGURAÇÕES -->
                 <section id="tab-configuracoes" class="tab-content hidden space-y-6">
                     <div>
                         <h2 class="text-2xl font-bold tracking-tight">Configurações do Sistema</h2>
-                        <p class="text-sm text-slate-400">Altere a imagem de cabeçalho do sistema na nuvem.</p>
+                        <p class="text-sm text-slate-400">Gerencie a logo e as formas de pagamento aceitas.</p>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -482,6 +483,31 @@
                                     <button onclick="resetLogo()" class="text-xs text-red-400 hover:text-red-300 font-medium flex items-center gap-1.5 transition-colors">
                                         <i class="fa-solid fa-trash-can"></i> Remover Logo Atual
                                     </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- CADASTRO DE FORMAS DE PAGAMENTO (ADICIONADO) -->
+                        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+                            <h3 class="font-bold text-sm tracking-wider uppercase text-blue-500 mb-4 flex items-center gap-2">
+                                <i class="fa-solid fa-credit-card"></i> Cadastrar Formas de Pagamento
+                            </h3>
+                            <form id="payment-method-form" onsubmit="addPaymentMethod(event)" class="space-y-4">
+                                <div>
+                                    <label class="block text-xs text-slate-400 mb-1 font-semibold uppercase">Nome da Forma de Pagamento</label>
+                                    <div class="flex gap-2">
+                                        <input type="text" id="new-pay-method-name" required class="flex-1 bg-slate-950 border border-slate-800 rounded-lg py-2 px-3 text-sm focus:outline-none focus:border-blue-500" placeholder="Ex: Pix, Dinheiro, Cartão de Crédito">
+                                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2 rounded-lg text-sm transition-colors">
+                                            Adicionar
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                            
+                            <div class="mt-4 border-t border-slate-800/50 pt-4">
+                                <span class="block text-xs text-slate-400 mb-2 font-semibold uppercase">Formas Cadastradas:</span>
+                                <div id="payment-methods-list" class="space-y-1.5 max-h-40 overflow-y-auto">
+                                    <!-- Listagem dinâmica via JS -->
                                 </div>
                             </div>
                         </div>
@@ -694,21 +720,48 @@
             </div>
 
             <!-- Status e Desconto Lado a Lado -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs text-slate-400 mb-1 font-semibold uppercase">Status do Atendimento</label>
-                    <select id="apt-status" required class="w-full bg-slate-950 border border-slate-800 rounded-lg py-2.5 px-3 text-sm focus:outline-none focus:border-blue-500">
-                        <option value="Confirmado">Confirmado</option>
-                        <option value="Pendente">Pendente</option>
-                        <option value="Concluído">Concluído</option>
-                        <option value="Cancelado">Cancelado</option>
-                    </select>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1 font-semibold uppercase">Status do Atendimento</label>
+                        <select id="apt-status" required class="w-full bg-slate-950 border border-slate-800 rounded-lg py-2.5 px-3 text-sm focus:outline-none focus:border-blue-500">
+                            <option value="Confirmado">Confirmado</option>
+                            <option value="Pendente">Pendente</option>
+                            <option value="Concluído">Concluído</option>
+                            <option value="Cancelado">Cancelado</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1 font-semibold uppercase">Desconto (R$)</label>
+                        <input type="number" id="apt-discount" step="0.01" min="0" oninput="updateAppointmentPriceLabel()" class="w-full bg-slate-950 border border-slate-800 rounded-lg py-2.5 px-3 text-sm focus:outline-none focus:border-blue-500" placeholder="0.00">
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-xs text-slate-400 mb-1 font-semibold uppercase">Desconto (R$)</label>
-                    <input type="number" id="apt-discount" step="0.01" min="0" oninput="updateAppointmentPriceLabel()" class="w-full bg-slate-950 border border-slate-800 rounded-lg py-2.5 px-3 text-sm focus:outline-none focus:border-blue-500" placeholder="0.00">
+
+                <!-- FORMAS DE PAGAMENTO MÚLTIPLAS (ADICIONADO) -->
+                <div class="border-t border-slate-800/60 pt-4 space-y-4">
+                    <span class="block text-xs text-slate-400 font-semibold uppercase tracking-wider">Formas de Pagamento</span>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-[10px] text-slate-400 mb-1 font-semibold uppercase">Forma de Pagamento</label>
+                            <select id="apt-payment-select" class="w-full bg-slate-950 border border-slate-800 rounded-lg py-2 px-3 text-sm focus:outline-none focus:border-blue-500">
+                                <option value="">Selecione...</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-400 mb-1 font-semibold uppercase">Valor Pago (R$)</label>
+                            <input type="number" id="apt-payment-value" step="0.01" class="w-full bg-slate-950 border border-slate-800 rounded-lg py-2 px-3 text-sm focus:outline-none focus:border-blue-500" placeholder="0.00">
+                        </div>
+                        <div class="flex items-end">
+                            <button type="button" onclick="addPaymentMethodToModalList()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg text-sm font-bold transition-colors shrink-0">
+                                Adicionar
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Lista de Pagamentos Adicionados -->
+                    <div id="selected-payments-container" class="space-y-1.5 max-h-24 overflow-y-auto bg-slate-950 border border-slate-800 p-2.5 rounded-lg">
+                        <p class="text-xs text-slate-500 text-center p-2">Nenhum pagamento registrado ainda.</p>
+                    </div>
                 </div>
-            </div>
 
             <!-- Observações -->
             <div>
@@ -1381,7 +1434,8 @@
         let expenses = [];
         let customers = []; 
         let savedLogo = "";
-        
+                let paymentMethods = []; // Adicionado: Lista de formas de pagamento cadastradas
+				
         let currentTab = "agenda";
 		let calendarYear = new Date().getFullYear(); // Adicionado para navegação
         let calendarMonth = new Date().getMonth();   // Adicionado para navegação
@@ -1393,6 +1447,7 @@
         let editingCustomerId = null;
         let editingServiceId = null;
         let selectedServicesInModal = [];
+		    let selectedPaymentsInModal = []; // Adicionado: Lista de pagamentos do agendamento atual
         let financeValuesHidden = false;
 
         const LOGIN_USER = "agendamento";
@@ -1452,6 +1507,16 @@
             }
             renderLogo();
         });
+		
+		// Sincronizar Formas de Pagamento (Nuvem)
+        onSnapshot(collection(db, "payment_methods"), (snapshot) => {
+            paymentMethods = [];
+            snapshot.forEach(docSnap => {
+                paymentMethods.push({ id: docSnap.id, ...docSnap.data() });
+            });
+            populatePaymentMethodDropdown();
+            if (currentTab === 'configuracoes') renderPaymentMethodsSettings();
+        });
 
         // Controle de Sessão Criptografado pelo Firebase
         onAuthStateChanged(auth, (user) => {
@@ -1497,6 +1562,8 @@
             updateDashboard();
             renderLogo();
             renderMiniCalendar(); 
+            if (currentTab === 'configuracoes') renderPaymentMethodsSettings();
+        
         }
 		
 		// ATUALIZA OS FILTROS QUANDO ALTERADO NA TELA DE FINANÇAS (SINCRONIZADO)
@@ -1699,6 +1766,9 @@
                 document.getElementById('appointment-form').reset();
                 document.getElementById('apt-car').value = ""; // Limpa campo carro
                 document.getElementById('apt-observation').value = ""; // Limpa campo observação
+                selectedPaymentsInModal = []; // Limpa pagamentos múltiplos
+                renderSelectedPaymentsInModal();
+                populatePaymentMethodDropdown();
                 
                 const todayStr = new Date().toISOString().split('T')[0];
                 document.getElementById('apt-date-start').value = todayStr;
@@ -1973,6 +2043,134 @@
                 `;
             }
         }
+
+		// SALVA FORMA DE PAGAMENTO NO FIREBASE
+        async function addPaymentMethod(e) {
+            e.preventDefault();
+            const input = document.getElementById('new-pay-method-name');
+            if (!input) return;
+            const name = input.value.trim();
+            if (!name) return;
+
+            try {
+                await addDoc(collection(db, "payment_methods"), { name });
+                input.value = "";
+                alert("Forma de pagamento cadastrada com sucesso!");
+            } catch (err) {
+                alert("Erro ao cadastrar forma de pagamento.");
+            }
+        }
+
+        // DELETA FORMA DE PAGAMENTO DO FIREBASE
+        async function deletePaymentMethod(id) {
+            if (confirm("Excluir esta forma de pagamento?")) {
+                try {
+                    await deleteDoc(doc(db, "payment_methods", id));
+                    alert("Forma de pagamento excluída!");
+                } catch (err) {
+                    alert("Erro ao excluir.");
+                }
+            }
+        }
+
+        // RENDERIZA A LISTA DE FORMAS DE PAGAMENTO NAS CONFIGURAÇÕES
+        function renderPaymentMethodsSettings() {
+            const container = document.getElementById('payment-methods-list');
+            if (!container) return;
+            container.innerHTML = "";
+
+            paymentMethods.sort((a,b) => a.name.localeCompare(b.name));
+            paymentMethods.forEach(pm => {
+                container.innerHTML += `
+                    <div class="flex items-center justify-between bg-slate-950/50 p-2 rounded-lg border border-slate-800">
+                        <span class="text-xs font-semibold text-slate-200">${pm.name}</span>
+                        <button onclick="deletePaymentMethod('${pm.id}')" class="text-red-400 hover:text-red-300 text-xs p-1">
+                            <i class="fa-solid fa-trash-can"></i> Excluir
+                        </button>
+                    </div>
+                `;
+            });
+
+            if (paymentMethods.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-500 text-center py-2">Nenhuma forma cadastrada.</p>`;
+            }
+        }
+		
+		// POPULA O DROPDOWN DO MODAL
+        function populatePaymentMethodDropdown() {
+            const dropdown = document.getElementById('apt-payment-select');
+            if (!dropdown) return;
+            dropdown.innerHTML = '<option value="">Selecione...</option>';
+            
+            paymentMethods.sort((a,b) => a.name.localeCompare(b.name));
+            paymentMethods.forEach(pm => {
+                dropdown.innerHTML += `<option value="${pm.id}">${pm.name}</option>`;
+            });
+        }
+
+        // ADICIONA PAGAMENTO NA LISTA DO MODAL
+
+        function addPaymentMethodToModalList() {
+            const select = document.getElementById('apt-payment-select');
+            const valInput = document.getElementById('apt-payment-value');
+            if (!select || !valInput) return;
+
+            const pmId = select.value;
+            // Se o campo estiver vazio, define o valor como 0 para não bloquear o cadastro
+            const value = valInput.value.trim() !== "" ? parseFloat(valInput.value) : 0;
+
+            if (!pmId) {
+                alert("Selecione uma forma de pagamento.");
+                return;
+            }
+
+            // Removida a validação de "value <= 0" para permitir pagamentos sem valor definido
+
+            const pmObj = paymentMethods.find(pm => pm.id === pmId);
+            if (!pmObj) return;
+
+            if (selectedPaymentsInModal.some(p => p.id === pmId)) {
+                alert("Esta forma de pagamento já foi adicionada.");
+                return;
+            }
+
+            selectedPaymentsInModal.push({ id: pmId, name: pmObj.name, value: value });
+            select.value = "";
+            valInput.value = "";
+
+            renderSelectedPaymentsInModal();
+        }
+
+        // RENDERIZA A LISTA DOS PAGAMENTOS SELECIONADOS NO MODAL
+        function renderSelectedPaymentsInModal() {
+            const container = document.getElementById('selected-payments-container');
+            if (!container) return;
+            container.innerHTML = "";
+
+            if (selectedPaymentsInModal.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-500 text-center p-2">Nenhum pagamento registrado ainda.</p>`;
+                return;
+            }
+
+            selectedPaymentsInModal.forEach((p, index) => {
+                container.innerHTML += `
+                    <div class="flex items-center justify-between bg-slate-900 border border-slate-800 p-2 rounded-md">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-semibold text-slate-200">${p.name}:</span>
+                            <span class="text-xs text-emerald-400 font-bold">R$ ${p.value.toFixed(2)}</span>
+                        </div>
+                        <button type="button" onclick="removePaymentFromModalList(${index})" class="text-red-400 hover:text-red-300 text-xs p-1">
+                            <i class="fa-solid fa-trash-can"></i> Remover
+                        </button>
+                    </div>
+                `;
+            });
+        }
+
+        window.removePaymentFromModalList = function(index) {
+            selectedPaymentsInModal.splice(index, 1);
+            renderSelectedPaymentsInModal();
+        };
 
         async function addService(e) {
             e.preventDefault();
@@ -2361,6 +2559,10 @@
             document.getElementById('apt-discount').value = apt.discount || 0; 
             document.getElementById('apt-status').value = apt.status || "Confirmado";
 
+            selectedPaymentsInModal = apt.payments || []; // Carrega pagamentos múltiplos salvos
+            renderSelectedPaymentsInModal();
+            populatePaymentMethodDropdown();
+
             selectedServicesInModal = [];
             
             let storedServiceIds = [];
@@ -2460,6 +2662,7 @@
                 observation,
                 serviceIds,
                 serviceNames,
+                payments: selectedPaymentsInModal, // Salva o array de pagamentos múltiplos
                 price: finalPrice, 
                 discount: discount, 
                 subtotal: subtotal,
@@ -2693,6 +2896,25 @@
             });
 
             currentY += 2;
+
+             // Se houver pagamentos registrados, imprime no PDF
+            if (apt.payments && Array.isArray(apt.payments) && apt.payments.length > 0) {
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(8);
+                doc.setTextColor(100, 116, 139);
+                doc.text("FORMA(S) DE PAGAMENTO:", startX, currentY);
+                currentY += 4.5;
+                
+                apt.payments.forEach(p => {
+                    doc.setFont("helvetica", "normal");
+                    doc.setFontSize(8);
+                    doc.setTextColor(51, 65, 85);
+                    doc.text(p.name, startX + 2, currentY);
+                    doc.text(`R$ ${parseFloat(p.value).toFixed(2)}`, pageWidth - startX - 2, currentY, { align: 'right' });
+                    currentY += 4.5;
+                });
+                currentY += 2.5;
+            }
 
             if (discountValue > 0) {
                 doc.setFont("helvetica", "normal");
@@ -3269,7 +3491,12 @@
         window.toggleFinancePrivacy = toggleFinancePrivacy;
 		window.changeFinanceFilterRange = changeFinanceFilterRange;
         window.clearFinanceDateFilter = clearFinanceDateFilter;
-        window.changeCalendarMonth = changeCalendarMonth; // Adicionado globalmente
+        window.changeCalendarMonth = changeCalendarMonth; // Adicionado globalmente para o clique de troca de mês
+        window.addPaymentMethod = addPaymentMethod; // Adicionado globalmente
+        window.deletePaymentMethod = deletePaymentMethod; // Adicionado globalmente
+        window.addPaymentMethodToModalList = addPaymentMethodToModalList; // Adicionado globalmente
     </script>
 </body>
 </html>
+
+
