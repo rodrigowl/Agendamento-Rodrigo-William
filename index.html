@@ -109,6 +109,11 @@
                         <i class="fa-solid fa-gears text-blue-500 w-5"></i> Configurações
                     </button>
                 </nav>
+				
+				<!-- ADICIONE ESTE BOTÃO LOGO ABAIXO DO BOTÃO DE CONFIGURAÇÕES -->
+                    <button onclick="switchTab('backup')" class="tab-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-[14px] font-semibold text-slate-300 hover:bg-slate-800/50 hover:text-white transition-colors" data-tab="backup">
+                        <i class="fa-solid fa-database text-blue-500 w-5"></i> Backup / Importar
+                    </button>
 
                 <!-- Box Estético Dourado Premium -->
                 <div class="mx-4 my-4 p-4 rounded-xl bg-gradient-to-br from-slate-950 to-slate-900 border border-blue-500/20 relative overflow-hidden group select-none">
@@ -509,6 +514,45 @@
                                 <div id="payment-methods-list" class="space-y-1.5 max-h-40 overflow-y-auto">
                                     <!-- Listagem dinâmica via JS -->
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+				
+				<!-- ADICIONE ESTA SEÇÃO LOGO APÓS A SEÇÃO CONFIGURAÇÕES (tab-configuracoes) -->
+                <section id="tab-backup" class="tab-content hidden space-y-6">
+                    <div>
+                        <h2 class="text-2xl font-bold tracking-tight">Backup e Restauração de Dados</h2>
+                        <p class="text-sm text-slate-400">Exporte seus dados do sistema para segurança ou restaure dados salvos de um arquivo.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Gerar Backup -->
+                        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+                            <h3 class="font-bold text-sm tracking-wider uppercase text-blue-500 mb-4 flex items-center gap-2">
+                                <i class="fa-solid fa-download"></i> Baixar Backup
+                            </h3>
+                            <p class="text-xs text-slate-400 mb-4 leading-relaxed">
+                                Baixe uma cópia contendo todos os clientes, agendamentos, serviços, despesas, formas de pagamento e configurações de logo atuais salvos na nuvem.
+                            </p>
+                            <button onclick="exportBackupData()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg text-xs transition-colors flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-file-arrow-down"></i> Gerar Arquivo de Backup (.json)
+                            </button>
+                        </div>
+
+                        <!-- Restaurar Backup -->
+                        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+                            <h3 class="font-bold text-sm tracking-wider uppercase text-emerald-500 mb-4 flex items-center gap-2">
+                                <i class="fa-solid fa-upload"></i> Restaurar Dados
+                            </h3>
+                            <p class="text-xs text-slate-400 mb-4 leading-relaxed">
+                                Selecione um arquivo de backup gerado anteriormente para reescrever as informações correspondentes diretamente no banco de dados na nuvem.
+                            </p>
+                            <div class="space-y-4">
+                                <input type="file" id="backup-file-input" accept=".json" class="w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700 cursor-pointer">
+                                <button onclick="importBackupData()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg text-xs transition-colors flex items-center justify-center gap-2">
+                                    <i class="fa-solid fa-file-import"></i> Restaurar do Arquivo
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -1383,6 +1427,8 @@
                     currentY += 4; // Espaçamento entre os grupos de dias
                 });
             }
+			
+		
 
             // Rodapé final de fechamento do relatório
             if (currentY > 265) {
@@ -2094,7 +2140,7 @@
             if (paymentMethods.length === 0) {
                 container.innerHTML = `<p class="text-xs text-slate-500 text-center py-2">Nenhuma forma cadastrada.</p>`;
             }
-        }
+        } 
 		
 		// POPULA O DROPDOWN DO MODAL
         function populatePaymentMethodDropdown() {
@@ -3478,8 +3524,7 @@
         window.addAppointment = addAppointment;
         window.deleteAppointment = deleteAppointment;
         window.editAppointment = editAppointment;
-        window.addSelectedServiceToList = addSelectedServiceToList;
-        
+		window.addSelectedServiceToList = addSelectedServiceToList;
         window.changeFilterRange = changeFilterRange;
         window.clearDateFilter = clearDateFilter;
         window.setQuickPeriod = setQuickPeriod;
@@ -3495,6 +3540,109 @@
         window.addPaymentMethod = addPaymentMethod; // Adicionado globalmente
         window.deletePaymentMethod = deletePaymentMethod; // Adicionado globalmente
         window.addPaymentMethodToModalList = addPaymentMethodToModalList; // Adicionado globalmente
+
+        // ==========================================
+        // ROTINAS DE BACKUP GLOBAL
+        // ==========================================
+        window.exportBackupData = async function() {
+            try {
+                const backupPayload = {
+                    version: "1.0",
+                    timestamp: new Date().toISOString(),
+                    services: services || [],
+                    appointments: appointments || [],
+                    expenses: expenses || [],
+                    customers: customers || [],
+                    payment_methods: paymentMethods || [],
+                    config_logo: savedLogo || ""
+                };
+
+                const blob = new Blob([JSON.stringify(backupPayload, null, 2)], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const downloadAnchor = document.createElement('a');
+                downloadAnchor.href = url;
+                downloadAnchor.download = `Backup_Espaco_Automotivo_${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(downloadAnchor);
+                downloadAnchor.click();
+                document.body.removeChild(downloadAnchor);
+                URL.revokeObjectURL(url);
+            } catch (err) {
+                alert("Erro ao gerar o arquivo de backup: " + err.message);
+                console.error(err);
+            }
+        };
+
+        window.importBackupData = async function() {
+            const fileInput = document.getElementById('backup-file-input');
+            if (!fileInput || !fileInput.files[0]) {
+                alert("Por favor, selecione um arquivo de backup (.json) primeiro.");
+                return;
+            }
+
+            if (!confirm("Atenção! Isso irá importar os dados do backup para o seu banco de dados na nuvem. Deseja continuar?")) {
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    
+                    if (!data.services || !data.appointments || !data.customers) {
+                        alert("Arquivo de backup inválido ou incompatível.");
+                        return;
+                    }
+
+                    // Importar Clientes
+                    for (const item of data.customers) {
+                        const { id, ...docData } = item;
+                        await setDoc(doc(db, "customers", id), docData);
+                    }
+
+                    // Importar Serviços
+                    for (const item of data.services) {
+                        const { id, ...docData } = item;
+                        await setDoc(doc(db, "services", id), docData);
+                    }
+
+                    // Importar Agendamentos
+                    for (const item of data.appointments) {
+                        const { id, ...docData } = item;
+                        await setDoc(doc(db, "appointments", id), docData);
+                    }
+
+                    // Importar Despesas
+                    if (data.expenses) {
+                        for (const item of data.expenses) {
+                            const { id, ...docData } = item;
+                            await setDoc(doc(db, "expenses", id), docData);
+                        }
+                    }
+
+                    // Importar Formas de Pagamento
+                    if (data.payment_methods) {
+                        for (const item of data.payment_methods) {
+                            const { id, ...docData } = item;
+                            await setDoc(doc(db, "payment_methods", id), docData);
+                        }
+                    }
+
+                    // Importar Logo do Topo
+                    if (data.config_logo !== undefined) {
+                        await setDoc(doc(db, "config", "logo"), { value: data.config_logo });
+                    }
+
+                    alert("Backup restaurado e sincronizado com sucesso com a nuvem!");
+                    fileInput.value = "";
+                } catch (err) {
+                    alert("Erro ao ler ou processar o arquivo de backup: " + err.message);
+                    console.error(err);
+                }
+            };
+            reader.readAsText(file);
+        };
+    
     </script>
 </body>
 </html>
