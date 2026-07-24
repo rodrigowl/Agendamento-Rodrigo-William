@@ -8,8 +8,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome para ícones -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <!-- Biblioteca nativa do jsPDF para PDF de alta qualidade -->
+   <!-- Biblioteca nativa do jsPDF para PDF de alta qualidade -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Biblioteca Chart.js para renderização de gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #0f172a; }
@@ -93,6 +95,9 @@
 
                 <!-- Menu de Navegação -->
                 <nav class="p-4 space-y-1">
+                    <button onclick="switchTab('dashboard')" class="tab-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-[14px] font-semibold text-slate-300 hover:bg-slate-800/50 hover:text-white transition-colors" data-tab="dashboard">
+                        <i class="fa-solid fa-chart-pie text-blue-500 w-5"></i> Dashboard / Gráficos
+                    </button>
                     <button onclick="switchTab('agenda')" class="tab-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-[14px] font-semibold text-slate-300 hover:bg-slate-800/50 hover:text-white transition-colors" data-tab="agenda">
                         <i class="fa-solid fa-calendar-days text-blue-500 w-5"></i> Agendamentos
                     </button>
@@ -141,11 +146,11 @@
             </div>
         </aside>
 
-        <!-- CONTAINER DO CONTEÚDO PRINCIPAL (MEIO + DIREITA) -->
+       <!-- CONTAINER DO CONTEÚDO PRINCIPAL (MEIO + DIREITA) -->
         <div class="flex-1 flex flex-row overflow-hidden bg-slate-950">
             
             <!-- COLUNA 2: CONTEÚDO DO MEIO (DASHBOARD ATIVO) -->
-        <div class="flex-1 p-6 lg:p-8 overflow-y-auto w-full">
+        <div class="flex-1 p-6 lg:p-8 overflow-y-auto">
                 
                 <!-- SEÇÃO 1: AGENDA (VISUAL NOVO DO MOCKUP) -->
                 <section id="tab-agenda" class="tab-content hidden space-y-6">
@@ -555,9 +560,91 @@
                                 </button>
                             </div>
                         </div>
+                    </div> <!-- Mantém apenas o fechamento do grid -->
+                </section> <!-- Fecha o backup normalmente -->
+
+               <!-- SEÇÃO 5: DASHBOARD INTERATIVO COM GRÁFICOS -->
+                <section id="tab-dashboard" class="tab-content hidden space-y-6">
+                    <!-- Top Bar com Botão de Privacidade e Filtro -->
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-900 pb-4">
+                        <div>
+                            <h2 class="text-2xl font-bold tracking-tight flex items-center gap-2">
+                                Painel de Indicadores e Gráficos
+                                <button onclick="toggleFinancePrivacy()" class="text-slate-400 hover:text-white transition-colors" title="Esconder/Mostrar Valores">
+                                    <i id="dashboard-privacy-icon" class="fa-solid fa-eye text-base"></i>
+                                </button>
+                            </h2>
+                            <p class="text-sm text-slate-400">Acompanhe de forma interativa a evolução de vendas, despesas e produtividade.</p>
+                        </div>
+                        
+                        <!-- Seletor de Período -->
+                        <div class="flex items-center gap-2 bg-slate-900 border border-slate-800 p-2.5 rounded-xl shrink-0">
+                            <span class="text-xs text-slate-400 font-bold uppercase tracking-wider">Período:</span>
+                            <select id="db-time-range" onchange="renderDashboardCharts()" class="bg-slate-950 border border-slate-800 rounded-lg py-1 px-2.5 text-xs text-slate-100 font-bold focus:outline-none focus:border-blue-500 cursor-pointer">
+                                <option value="all">Todo o Período</option>
+                                <option value="6months" selected>Últimos 6 Meses</option>
+                                <option value="month">Este Mês</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Cards de Resumo Rápido do Dashboard -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl">
+                            <span class="text-xs text-slate-400 font-bold uppercase tracking-wider block">Faturamento Bruto</span>
+                            <span id="db-total-revenue" class="text-2xl font-black mt-2 block text-emerald-400">R$ 0,00</span>
+                        </div>
+                        <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl">
+                            <span class="text-xs text-slate-400 font-bold uppercase tracking-wider block">Total de Despesas</span>
+                            <span id="db-total-expenses" class="text-2xl font-black mt-2 block text-red-400">R$ 0,00</span>
+                        </div>
+                        <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl">
+                            <span class="text-xs text-slate-400 font-bold uppercase tracking-wider block">Lucro Líquido Real</span>
+                            <span id="db-net-profit" class="text-2xl font-black mt-2 block text-blue-400">R$ 0,00</span>
+                        </div>
+                        <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl">
+                            <span class="text-xs text-slate-400 font-bold uppercase tracking-wider block">Agendamentos Finalizados</span>
+                            <span id="db-total-appointments" class="text-2xl font-black mt-2 block text-amber-500">0</span>
+                        </div>
+                    </div>
+
+                    <!-- Grid de Gráficos -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Gráfico 1: Evolução Financeira -->
+                        <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
+                            <h3 class="font-bold text-xs tracking-wider uppercase text-blue-500 mb-4 flex items-center gap-2">
+                                <i class="fa-solid fa-chart-line"></i> Evolução Mensal (Entradas vs Saídas)
+                            </h3>
+                            <div class="relative h-72">
+                                <canvas id="evolutionChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Gráfico 2: Serviços mais procurados -->
+                        <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
+                            <h3 class="font-bold text-xs tracking-wider uppercase text-blue-500 mb-4 flex items-center gap-2">
+                                <i class="fa-solid fa-chart-simple"></i> Serviços Mais Prestados (Top 5)
+                            </h3>
+                            <div class="relative h-72">
+                                <canvas id="servicesChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Gráfico 3: Status dos Agendamentos (Centralizado) -->
+                        <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl lg:col-span-2">
+                            <h3 class="font-bold text-xs tracking-wider uppercase text-blue-500 mb-4 flex items-center gap-2">
+                                <i class="fa-solid fa-circle-info"></i> Status Operacional dos Agendamentos
+                            </h3>
+                            <!-- Adicionado limite de largura e margens auto para centralização perfeita -->
+                            <div class="relative h-72 max-w-md mx-auto">
+                                <canvas id="statusChart"></canvas>
+                            </div>
+                        </div>
                     </div>
                 </section>
             </div>
+	
+			
 
             <!-- COLUNA 3: COLUNA LATERAL DE RESUMO DIREITO (MOCKUP ORIGINAL) -->
             <div class="hidden xl:flex w-80 border-l border-slate-900 bg-slate-900/30 p-6 flex-col gap-6 overflow-y-auto shrink-0 select-none">
@@ -1483,6 +1570,10 @@
                 let paymentMethods = []; // Adicionado: Lista de formas de pagamento cadastradas
 				
         let currentTab = "agenda";
+		// Instâncias globais para os gráficos
+        let evolutionChartInstance = null;
+        let servicesChartInstance = null;
+        let statusChartInstance = null;
 		let calendarYear = new Date().getFullYear(); // Adicionado para navegação
         let calendarMonth = new Date().getMonth();   // Adicionado para navegação
         let selectedFilterStartDate = ""; 
@@ -1800,6 +1891,7 @@
             if (tabName === 'clientes') renderCustomers();
             if (tabName === 'servicos') renderServices();
             if (tabName === 'financeiro') renderFinance();
+            if (tabName === 'dashboard') renderDashboardCharts();
         }
 
         // CONTROLE DOS MODAIS
@@ -3433,6 +3525,7 @@
 
                 updateFinanceDashboardValues();
                 renderTopStats(); 
+				if (currentTab === 'dashboard') renderDashboardCharts();
             } catch (err) {
                 console.error("Erro ao atualizar o painel:", err);
             }
@@ -3442,7 +3535,7 @@
         function toggleFinancePrivacy() {
             financeValuesHidden = !financeValuesHidden;
             
-            const icons = ['finance-privacy-icon', 'agenda-privacy-icon'];
+            const icons = ['finance-privacy-icon', 'agenda-privacy-icon', 'dashboard-privacy-icon'];
             icons.forEach(id => {
                 const icon = document.getElementById(id);
                 if (icon) {
@@ -3540,6 +3633,243 @@
         window.addPaymentMethod = addPaymentMethod; // Adicionado globalmente
         window.deletePaymentMethod = deletePaymentMethod; // Adicionado globalmente
         window.addPaymentMethodToModalList = addPaymentMethodToModalList; // Adicionado globalmente
+  window.renderDashboardCharts = renderDashboardCharts; // Registra renderização dos gráficos
+
+        // ==========================================
+        // FUNÇÃO DE PROCESSAMENTO DOS GRÁFICOS DO DASHBOARD
+        // ==========================================
+        function renderDashboardCharts() {
+            try {
+                const today = new Date();
+                const monthsNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+                
+                // Obtém a opção selecionada no filtro
+                const timeRange = document.getElementById('db-time-range') ? document.getElementById('db-time-range').value : '6months';
+                let selectedMonths = [];
+
+                if (timeRange === 'month') {
+                    // Apenas o mês corrente
+                    selectedMonths.push({
+                        year: today.getFullYear(),
+                        month: today.getMonth(),
+                        label: `${monthsNames[today.getMonth()]}/${today.getFullYear()}`
+                    });
+                } else if (timeRange === '6months') {
+                    // Últimos 6 meses
+                    for (let i = 5; i >= 0; i--) {
+                        const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+                        selectedMonths.push({
+                            year: d.getFullYear(),
+                            month: d.getMonth(),
+                            label: `${monthsNames[d.getMonth()]}/${d.getFullYear()}`
+                        });
+                    }
+                } else {
+                    // Todos os tempos: varre o banco para pegar de forma dinâmica todos os meses com registros
+                    const uniqueMonths = new Set();
+                    const allDates = [
+                        ...appointments.map(a => a.dateStart || a.date),
+                        ...expenses.map(e => e.date)
+                    ].filter(Boolean);
+
+                    allDates.forEach(dStr => {
+                        const [y, m] = dStr.split("-");
+                        if (y && m) uniqueMonths.add(`${y}-${m}`);
+                    });
+
+                    if (uniqueMonths.size === 0) {
+                        // Fallback se estiver vazio
+                        for (let i = 5; i >= 0; i--) {
+                            const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+                            selectedMonths.push({ year: d.getFullYear(), month: d.getMonth(), label: `${monthsNames[d.getMonth()]}/${d.getFullYear()}` });
+                        }
+                    } else {
+                        const sortedYM = Array.from(uniqueMonths).sort();
+                        sortedYM.forEach(ym => {
+                            const [y, m] = ym.split("-").map(Number);
+                            selectedMonths.push({
+                                year: y,
+                                month: m - 1,
+                                label: `${monthsNames[m - 1]}/${y}`
+                            });
+                        });
+                    }
+                }
+
+                // Filtra as listas de agendamentos e despesas baseando-se no escopo do período selecionado
+                const filteredApts = appointments.filter(apt => {
+                    const dStr = apt.dateStart || apt.date;
+                    if (!dStr) return false;
+                    const [y, mon] = dStr.split("-").map(Number);
+                    return selectedMonths.some(m => m.year === y && m.month === (mon - 1));
+                });
+
+                const filteredExps = expenses.filter(exp => {
+                    if (!exp.date) return false;
+                    const [y, mon] = exp.date.split("-").map(Number);
+                    return selectedMonths.some(m => m.year === y && m.month === (mon - 1));
+                });
+
+                // 1. CARDS DE KPI (Filtrados conforme o período)
+                const totalRev = filteredApts.filter(apt => apt.status !== "Cancelado").reduce((sum, apt) => sum + parseFloat(apt.price || 0), 0);
+                const totalExp = filteredExps.reduce((sum, exp) => sum + parseFloat(exp.amount || 0), 0);
+                const netProf = totalRev - totalExp;
+                const totalCompleted = filteredApts.filter(apt => apt.status === "Concluído").length;
+
+                const revEl = document.getElementById('db-total-revenue');
+                const expEl = document.getElementById('db-total-expenses');
+                const prfEl = document.getElementById('db-net-profit');
+                const aptEl = document.getElementById('db-total-appointments');
+
+                if (revEl) revEl.textContent = financeValuesHidden ? "R$ ••••••" : `R$ ${totalRev.toFixed(2)}`;
+                if (expEl) expEl.textContent = financeValuesHidden ? "R$ ••••••" : `R$ ${totalExp.toFixed(2)}`;
+                if (prfEl) prfEl.textContent = financeValuesHidden ? "R$ ••••••" : `R$ ${netProf.toFixed(2)}`;
+                if (aptEl) aptEl.textContent = totalCompleted;
+
+                // Destrói os gráficos antigos para evitar bugs de renderização
+                if (evolutionChartInstance) evolutionChartInstance.destroy();
+                if (servicesChartInstance) servicesChartInstance.destroy();
+                if (statusChartInstance) statusChartInstance.destroy();
+
+                // 2. PROCESSAMENTO DO GRÁFICO 1: EVOLUÇÃO MENSAL
+                const revenueBarData = [];
+                const expensesBarData = [];
+
+                selectedMonths.forEach(m => {
+                    const monthlyRevenue = appointments
+                        .filter(apt => {
+                            if (apt.status === "Cancelado") return false;
+                            const dStr = apt.dateStart || apt.date;
+                            if (!dStr) return false;
+                            const [y, mon] = dStr.split("-").map(Number);
+                            return y === m.year && mon === (m.month + 1);
+                        })
+                        .reduce((sum, apt) => sum + parseFloat(apt.price || 0), 0);
+
+                    const monthlyExpenses = expenses
+                        .filter(exp => {
+                            if (!exp.date) return false;
+                            const [y, mon] = exp.date.split("-").map(Number);
+                            return y === m.year && mon === (m.month + 1);
+                        })
+                        .reduce((sum, exp) => sum + parseFloat(exp.amount || 0), 0);
+
+                    revenueBarData.push(monthlyRevenue);
+                    expensesBarData.push(monthlyExpenses);
+                });
+
+                const evolutionCtx = document.getElementById('evolutionChart').getContext('2d');
+                evolutionChartInstance = new Chart(evolutionCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: selectedMonths.map(m => m.label),
+                        datasets: [
+                            {
+                                label: 'Faturamento',
+                                data: revenueBarData,
+                                backgroundColor: '#10b981',
+                                borderRadius: 5
+                            },
+                            {
+                                label: 'Despesas',
+                                data: expensesBarData,
+                                backgroundColor: '#ef4444',
+                                borderRadius: 5
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { labels: { color: '#94a3b8' } }
+                        },
+                        scales: {
+                            x: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#94a3b8' } },
+                            y: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#94a3b8' } }
+                        }
+                    }
+                });
+
+                // 3. PROCESSAMENTO DO GRÁFICO 2: SERVIÇOS MAIS PRESTADOS (TOP 5)
+                const serviceCounts = {};
+                filteredApts.forEach(apt => {
+                    if (apt.status === "Cancelado") return;
+                    const names = Array.isArray(apt.serviceNames) ? apt.serviceNames : (apt.serviceName ? [apt.serviceName] : []);
+                    names.forEach(name => {
+                        serviceCounts[name] = (serviceCounts[name] || 0) + 1;
+                    });
+                });
+
+                const sortedServices = Object.keys(serviceCounts)
+                    .map(name => ({ name, count: serviceCounts[name] }))
+                    .sort((a, b) => b.count - a.count)
+                    .slice(0, 5);
+
+                const serviceLabels = sortedServices.map(s => s.name);
+                const serviceValues = sortedServices.map(s => s.count);
+
+                const servicesCtx = document.getElementById('servicesChart').getContext('2d');
+                servicesChartInstance = new Chart(servicesCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: serviceLabels,
+                        datasets: [{
+                            label: 'Quantidade',
+                            data: serviceValues,
+                            backgroundColor: '#3b82f6',
+                            borderRadius: 5
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        indexAxis: 'y',
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            x: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#94a3b8', stepSize: 1 } },
+                            y: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+                        }
+                    }
+                });
+
+                // 4. PROCESSAMENTO DO GRÁFICO 3: STATUS OPERACIONAL DOS AGENDAMENTOS
+                const statusCounts = { "Confirmado": 0, "Pendente": 0, "Concluído": 0, "Cancelado": 0 };
+                filteredApts.forEach(apt => {
+                    const s = apt.status || "Confirmado";
+                    if (statusCounts[s] !== undefined) statusCounts[s]++;
+                });
+
+                const statusCtx = document.getElementById('statusChart').getContext('2d');
+                statusChartInstance = new Chart(statusCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(statusCounts),
+                        datasets: [{
+                            data: Object.values(statusCounts),
+                            backgroundColor: ['#10b981', '#f59e0b', '#3b82f6', '#ef4444'],
+                            borderWidth: 2,
+                            borderColor: '#0f172a'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: { color: '#94a3b8' }
+                            }
+                        }
+                    }
+                });
+
+            } catch (err) {
+                console.error("Erro ao processar gráficos do dashboard:", err);
+            }
+        }
 
         // ==========================================
         // ROTINAS DE BACKUP GLOBAL
